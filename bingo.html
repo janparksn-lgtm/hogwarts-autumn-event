@@ -1,0 +1,83 @@
+<!-- bingo.html -->
+<div id="evBingo-root" class="ev-bingo">
+  <style>
+    .ev-bingo{--bg:#1a1625; --card:#261e36; --ink:#f7f2e8; --accent:#f0a202; --accent-2:#8bc34a; --ink-dim:#cfc6b4; --grid:#3a2f4d}
+    .ev-bingo *{box-sizing:border-box}
+    .ev-bingo .wrap{max-width:960px; margin:0 auto; padding:20px; color:var(--ink);
+      font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
+    .ev-bingo .card{background:var(--card); border:1px solid var(--grid); border-radius:16px; padding:20px; margin-bottom:24px}
+    .ev-bingo .board{display:grid; grid-template-columns:repeat(5,1fr); gap:8px}
+    .ev-bingo .cell{background:#2c2340; border:1px solid var(--grid); border-radius:12px; min-height:80px;
+      display:flex; align-items:center; justify-content:center; text-align:center; padding:8px; color:var(--ink); font-size:13px; cursor:pointer}
+    .ev-bingo .cell.marked{background:linear-gradient(180deg, rgba(240,162,2,.25), rgba(80,200,120,.22)); outline:2px solid var(--accent)}
+    .ev-bingo .controls{display:flex; justify-content:center; gap:12px; margin-top:20px; flex-wrap:wrap}
+    .ev-bingo button{background:var(--accent); border:none; border-radius:8px; padding:8px 14px; font-weight:600; cursor:pointer; color:#000}
+    .ev-bingo button:hover{background:var(--accent-2)}
+  </style>
+
+  <div class="wrap">
+    <section class="card">
+      <div class="board" id="evBingo-board"></div>
+      <div class="controls">
+        <button id="evBingo-generate">Обновить</button>
+        <button id="evBingo-clear">Снять отметки</button>
+        <button id="evBingo-save">Сохранить</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+  (function(){
+    const root = document.getElementById('evBingo-root');
+    if(!root) return;
+    const board = root.querySelector('#evBingo-board');
+    const btnGen = root.querySelector('#evBingo-generate');
+    const btnClr = root.querySelector('#evBingo-clear');
+    const btnSav = root.querySelector('#evBingo-save');
+    const LS_KEY = 'hogwartsBingo2025_v1';
+
+    const facts = [
+      "Поджёг кого-то или что-то заклинанием.","Потерял палочку.","Получил задание от профессора отработкой.",
+      "Заклинание рикошетом попало в соседа.","Опоздал на урок.","Получил минус 5 баллов от профессора.",
+      "Получил плюс баллы за хорошую работу.","Запачкал пергамент чернилами.","Получил похвалу от профессора.",
+      "Пил тыквенный сок.","Попал под дождь без зонта и палочки.","Получил письмо от совы прямо на уроке.",
+      "Ел на уроке.","Уронил перо на пол.","Случайно разлил сливочное пиво.","Получил смешное прозвище от однокурсников.",
+      "Ткнул в соседа палочкой на уроке.","Получил замечание за болтовню.","Сделал домашку в последний момент.",
+      "Потерял конспект.","Случайно поскользнулся на мокром полу.","Нарисовал что-то смешное на полях конспекта.",
+      "Задремал у камина в гостиной.","Получил задание помочь младшекурснику.","Услышал сплетню в библиотеке.",
+      "Забыл пароль в гостиную.","Наткнулся на Филча.","Был пойман за смехом на уроке.","Получил укус от кусачей герани.",
+      "Уронил горшок с растением.","Забыл надеть наушники при пересадке мандрагоры.","Забыл полить растение в теплице.",
+      "Перепутал ингредиенты в рецепте.","Случайно сварил не то зелье.","Попробовал зелье на вкус.",
+      "Отравился экспериментальным зельем.","Попал в больничное крыло.","Притворился больным, чтобы пропустить урок.",
+      "Поссорился с другом из-за ерунды.","Сказал кому-то грубость и пожалел об этом.","Получил записку на уроке.",
+      "Пытался списать у соседа.","Попал под проказу Пивза.","Прятался от Филча.","Получил пропуск в Запретную секцию."
+    ];
+
+    function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a }
+
+    function generateBoard(){
+      board.innerHTML = '';
+      const chosen = shuffle(facts.slice()).slice(0,20);
+      chosen.forEach((fact, i) => {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.textContent = (i+1)+'. '+fact;
+        cell.onclick = () => cell.classList.toggle('marked');
+        board.appendChild(cell);
+      });
+    }
+    function clearMarks(){ board.querySelectorAll('.cell.marked').forEach(c => c.classList.remove('marked')) }
+    function saveBoard(){ try{ localStorage.setItem(LS_KEY, board.innerHTML) }catch(e){} }
+
+    btnGen.addEventListener('click', generateBoard);
+    btnClr.addEventListener('click', clearMarks);
+    btnSav.addEventListener('click', saveBoard);
+
+    const saved = (()=>{ try{ return localStorage.getItem(LS_KEY) }catch(e){ return null } })();
+    if(saved){
+      board.innerHTML = saved;
+      board.querySelectorAll('.cell').forEach(c=> c.onclick = () => c.classList.toggle('marked'));
+    } else generateBoard();
+  })();
+  </script>
+</div>
