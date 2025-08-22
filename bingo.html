@@ -1,83 +1,201 @@
-<!-- bingo.html -->
-<div id="evBingo-root" class="ev-bingo">
-  <style>
-    .ev-bingo{--bg:#1a1625; --card:#261e36; --ink:#f7f2e8; --accent:#f0a202; --accent-2:#8bc34a; --ink-dim:#cfc6b4; --grid:#3a2f4d}
-    .ev-bingo *{box-sizing:border-box}
-    .ev-bingo .wrap{max-width:960px; margin:0 auto; padding:20px; color:var(--ink);
-      font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
-    .ev-bingo .card{background:var(--card); border:1px solid var(--grid); border-radius:16px; padding:20px; margin-bottom:24px}
-    .ev-bingo .board{display:grid; grid-template-columns:repeat(5,1fr); gap:8px}
-    .ev-bingo .cell{background:#2c2340; border:1px solid var(--grid); border-radius:12px; min-height:80px;
-      display:flex; align-items:center; justify-content:center; text-align:center; padding:8px; color:var(--ink); font-size:13px; cursor:pointer}
-    .ev-bingo .cell.marked{background:linear-gradient(180deg, rgba(240,162,2,.25), rgba(80,200,120,.22)); outline:2px solid var(--accent)}
-    .ev-bingo .controls{display:flex; justify-content:center; gap:12px; margin-top:20px; flex-wrap:wrap}
-    .ev-bingo button{background:var(--accent); border:none; border-radius:8px; padding:8px 14px; font-weight:600; cursor:pointer; color:#000}
-    .ev-bingo button:hover{background:var(--accent-2)}
-  </style>
+[html]<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Учебное Бинго — Осень в Хогвартсе</title>
+<style>
+  :root{
+    --bg:#1a1625; --card:#261e36; --ink:#f7f2e8; --ink-dim:#cfc6b4;
+    --grid:#3a2f4d; --accent:#f0a202; --good:#50c878;
+  }
+  html,body{height:100%}
+  body{ margin:0; background: radial-gradient(1200px 800px at 20% 0%, #2a223e 0%, var(--bg) 60%);
+        color:var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif; }
+  .wrap{ max-width:1000px; margin:28px auto; padding:16px }
+  .header{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:12px }
+  h1{ font-size:20px; margin:0 }
+  .sub{ color:var(--ink-dim); font-size:13px }
 
+  .board{ background:var(--card); border:1px solid var(--grid); border-radius:16px; padding:14px; }
+  .grid{ --cols:4; display:grid; grid-template-columns: repeat(var(--cols), 1fr); gap:10px }
+  .cell{
+    background:#2c2340; border:1px solid var(--grid); border-radius:12px; padding:10px; text-align:left;
+    min-height:90px; display:flex; gap:10px; align-items:flex-start; position:relative;
+    transition: .15s transform ease, .15s box-shadow ease, .15s border-color ease;
+  }
+  .cell:hover{ transform: translateY(-2px); border-color:#5a4a76 }
+  .num{ flex:0 0 auto; width:28px; height:28px; border-radius:8px; display:grid; place-items:center; font-weight:800; background:#201830; border:1px solid #4a3a63 }
+  .txt{ font-size:13px; line-height:1.25 }
+  .cell.marked{ outline:2px solid var(--accent); box-shadow: inset 0 0 0 9999px rgba(240,162,2,.07); }
+  .free{ position:absolute; right:8px; bottom:6px; font-size:10px; opacity:.8; color:#b39ddb }
+
+  /* Панель управления снизу */
+  .controls{ display:flex; gap:10px; align-items:center; justify-content:center; flex-wrap:wrap; margin:16px auto 0; padding:12px; }
+  .controls .badge{ padding:6px 10px; border-radius:999px; background:#2a203b; border:1px solid var(--grid); font-size:12px }
+  button{ appearance:none; border:1px solid #4a3a63; background:#33294a; color:var(--ink); padding:10px 14px; border-radius:10px; font:600 12px/1 ui-sans-serif,system-ui; cursor:pointer; transition:.2s; box-shadow:0 2px 0 rgba(0,0,0,.25)}
+  button:hover{ transform:translateY(-1px) }
+  .ok{ background:#1f3a2a; border-color:#2a6a4a }
+  .danger{ background:#3a2222; border-color:#6a2a2a }
+</style>
+</head>
+<body>
   <div class="wrap">
-    <section class="card">
-      <div class="board" id="evBingo-board"></div>
-      <div class="controls">
-        <button id="evBingo-generate">Обновить</button>
-        <button id="evBingo-clear">Снять отметки</button>
-        <button id="evBingo-save">Сохранить</button>
+    <div class="header">
+      <div>
+        <h1>Учебное Бинго</h1>
+        <div class="sub"></div>
       </div>
+      <div class="row">
+        <span class="badge"></span>
+      </div>
+    </div>
+
+    <section class="board">
+      <div class="grid" id="grid"></div>
     </section>
+
+    <div class="controls">
+      <button id="refresh">Перемешать</button>
+      <button id="resetMarks" class="danger">Снять отметки</button>
+      <button id="lock" class="ok">Зафиксировать карточку</button>
+    </div>
   </div>
 
-  <script>
-  (function(){
-    const root = document.getElementById('evBingo-root');
-    if(!root) return;
-    const board = root.querySelector('#evBingo-board');
-    const btnGen = root.querySelector('#evBingo-generate');
-    const btnClr = root.querySelector('#evBingo-clear');
-    const btnSav = root.querySelector('#evBingo-save');
-    const LS_KEY = 'hogwartsBingo2025_v1';
+<script>
+(function(){
+  // === Источник фактов ===
+  const FACTS = [
+    // Заклинания и магия
+    'Поджёг кого-то или что-то заклинанием.',
+    'Потерял палочку.',
+    'Получил задание от профессора отработкой.',
+    'Заклинание рикошетом попало в соседа.',
+    'Ткнул в соседа палочкой на уроке.',
+    // Учёба и занятия
+    'Опоздал на урок.',
+    'Получил минус 5 баллов от профессора.',
+    'Получил плюс баллы за хорошую работу.',
+    'Запачкал пергамент чернилами.',
+    'Получил похвалу от профессора.',
+    'Получил замечание за болтовню.',
+    'Сделал домашку в последний момент.',
+    'Потерял конспект.',
+    // Осенние и школьные события
+    'Пил тыквенный сок.',
+    'Попал под дождь без зонта и палочки.',
+    'Случайно поскользнулся на мокром полу.',
+    'Нарисовал что-то смешное на полях конспекта.',
+    'Задремал у камина в гостиной.',
+    // Хогвартская жизнь
+    'Получил письмо от совы прямо на уроке.',
+    'Ел на уроке.',
+    'Уронил перо на пол.',
+    'Случайно разлил сливочное пиво.',
+    'Получил смешное прозвище от однокурсников.',
+    'Получил задание помочь младшекурснику.',
+    'Услышал сплетню в библиотеке.',
+    'Забыл пароль в гостиную.',
+    'Наткнулся на Филча.',
+    'Был пойман за смехом на уроке.',
+    // Растения и травология
+    'Получил укус от кусачей герани.',
+    'Уронил горшок с растением.',
+    'Забыл надеть наушники при пересадке мандрагоры.',
+    'Забыл полить растение в теплице.',
+    // Зельеварение
+    'Перепутал ингредиенты в рецепте.',
+    'Случайно сварил не то зелье.',
+    'Попробовал зелье на вкус.',
+    // Болезни и травмы
+    'Отравился экспериментальным зельем.',
+    'Попал в больничное крыло.',
+    'Притворился больным, чтобы пропустить урок.',
+    // Социальные ситуации
+    'Поссорился с другом из-за ерунды.',
+    'Сказал кому-то грубость и пожалел об этом.',
+    'Получил записку на уроке.',
+    'Пытался списать у соседа.',
+    'Попал под проказу Пивза.',
+    'Прятался от Филча.',
+    'Получил пропуск в Запретную секцию.'
+  ];
 
-    const facts = [
-      "Поджёг кого-то или что-то заклинанием.","Потерял палочку.","Получил задание от профессора отработкой.",
-      "Заклинание рикошетом попало в соседа.","Опоздал на урок.","Получил минус 5 баллов от профессора.",
-      "Получил плюс баллы за хорошую работу.","Запачкал пергамент чернилами.","Получил похвалу от профессора.",
-      "Пил тыквенный сок.","Попал под дождь без зонта и палочки.","Получил письмо от совы прямо на уроке.",
-      "Ел на уроке.","Уронил перо на пол.","Случайно разлил сливочное пиво.","Получил смешное прозвище от однокурсников.",
-      "Ткнул в соседа палочкой на уроке.","Получил замечание за болтовню.","Сделал домашку в последний момент.",
-      "Потерял конспект.","Случайно поскользнулся на мокром полу.","Нарисовал что-то смешное на полях конспекта.",
-      "Задремал у камина в гостиной.","Получил задание помочь младшекурснику.","Услышал сплетню в библиотеке.",
-      "Забыл пароль в гостиную.","Наткнулся на Филча.","Был пойман за смехом на уроке.","Получил укус от кусачей герани.",
-      "Уронил горшок с растением.","Забыл надеть наушники при пересадке мандрагоры.","Забыл полить растение в теплице.",
-      "Перепутал ингредиенты в рецепте.","Случайно сварил не то зелье.","Попробовал зелье на вкус.",
-      "Отравился экспериментальным зельем.","Попал в больничное крыло.","Притворился больным, чтобы пропустить урок.",
-      "Поссорился с другом из-за ерунды.","Сказал кому-то грубость и пожалел об этом.","Получил записку на уроке.",
-      "Пытался списать у соседа.","Попал под проказу Пивза.","Прятался от Филча.","Получил пропуск в Запретную секцию."
-    ];
+  // === Состояние ===
+  const key = 'hogwarts_bingo_card_v1';
+  const state = { locked:false, picks:[], marked:[] };
 
-    function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a }
+  // Helpers
+  const save = ()=> localStorage.setItem(key, JSON.stringify(state));
+  const load = ()=> { try{ Object.assign(state, JSON.parse(localStorage.getItem(key)||'{}')); }catch(e){} };
 
-    function generateBoard(){
-      board.innerHTML = '';
-      const chosen = shuffle(facts.slice()).slice(0,20);
-      chosen.forEach((fact, i) => {
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        cell.textContent = (i+1)+'. '+fact;
-        cell.onclick = () => cell.classList.toggle('marked');
-        board.appendChild(cell);
-      });
+  function sampleFrom(excludeSet, count){
+    const pool = FACTS.map((_,i)=>i).filter(i=>!excludeSet.has(i));
+    for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]] }
+    return pool.slice(0,count);
+  }
+
+  // UI elements
+  const grid = document.getElementById('grid');
+  const refreshBtn = document.getElementById('refresh');
+  const resetMarksBtn = document.getElementById('resetMarks');
+  const lockBtn = document.getElementById('lock');
+
+  function ensureInit(){
+    if(!Array.isArray(state.picks) || state.picks.length!==20){
+      const all = FACTS.map((_,i)=>i);
+      for(let i=all.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [all[i],all[j]]=[all[j],all[i]] }
+      state.picks = all.slice(0,20);
     }
-    function clearMarks(){ board.querySelectorAll('.cell.marked').forEach(c => c.classList.remove('marked')) }
-    function saveBoard(){ try{ localStorage.setItem(LS_KEY, board.innerHTML) }catch(e){} }
+    if(!Array.isArray(state.marked) || state.marked.length!==20){ state.marked = Array(20).fill(false); }
+  }
 
-    btnGen.addEventListener('click', generateBoard);
-    btnClr.addEventListener('click', clearMarks);
-    btnSav.addEventListener('click', saveBoard);
+  function render(){
+    ensureInit();
+    grid.innerHTML='';
+    state.picks.forEach((fi, i)=>{
+      const cell = document.createElement('button'); cell.className='cell'; cell.type='button';
+      if(state.marked[i]) cell.classList.add('marked');
 
-    const saved = (()=>{ try{ return localStorage.getItem(LS_KEY) }catch(e){ return null } })();
-    if(saved){
-      board.innerHTML = saved;
-      board.querySelectorAll('.cell').forEach(c=> c.onclick = () => c.classList.toggle('marked'));
-    } else generateBoard();
-  })();
-  </script>
-</div>
+      const num = document.createElement('div'); num.className='num'; num.textContent = i+1;
+      const txt = document.createElement('div'); txt.className='txt'; txt.textContent = FACTS[fi];
+      const sub = document.createElement('div'); sub.className='free'; sub.textContent = `#${fi+1}`;
+
+      cell.append(num, txt, sub);
+      cell.addEventListener('click', ()=>{
+        state.marked[i] = !state.marked[i]; save();
+        cell.classList.toggle('marked');
+      });
+      grid.appendChild(cell);
+    });
+    save();
+  }
+
+  // Обновляет только НЕотмеченные ячейки, исключая уже используемые факты
+  function refreshFree(){
+    if(state.locked){ alert('Карточка зафиксирована. Снимите фиксацию, чтобы обновить.'); return }
+    ensureInit();
+    const keepIdx = [];
+    const usedFacts = new Set();
+    state.picks.forEach((fi, i)=>{ if(state.marked[i]){ keepIdx.push(i); usedFacts.add(fi); } });
+
+    // Составим список позиций, которые нужно заменить
+    const toReplace = [];
+    state.picks.forEach((fi, i)=>{ if(!state.marked[i]) toReplace.push(i); else usedFacts.add(fi); });
+
+    const fresh = sampleFrom(usedFacts, toReplace.length);
+    toReplace.forEach((pos, k)=>{ state.picks[pos] = fresh[k]; });
+    save(); render();
+  }
+
+  // Actions
+  refreshBtn.addEventListener('click', refreshFree);
+  resetMarksBtn.addEventListener('click', ()=>{ state.marked = Array(20).fill(false); save(); render(); });
+  lockBtn.addEventListener('click', ()=>{ state.locked=!state.locked; lockBtn.textContent = state.locked? 'Снять фиксацию' : 'Зафиксировать карточку'; save(); });
+
+  // Init
+  (function init(){ load(); ensureInit(); render(); })();
+})();
+</script>
+</body>
+</html>[/html]
