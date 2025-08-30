@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+[html]<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>«Найди пару» — Сливочное пиво (макс. сложность)</title>
+<title>«Найди пару»</title>
 <style>
   :root{
     --bg:#1a1625; --card:#261e36; --ink:#f7f2e8; --ink-dim:#cfc6b4; --grid:#3a2f4d;
@@ -18,12 +18,14 @@
       url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22><text x=%220%22 y=%2236%22 font-size=%2232%22>🕯️</text></svg>');
     background-blend-mode:multiply;
   }
-  .wrap{max-width:980px; margin:28px auto; padding:16px}
+  .wrap{max-width:980px; margin:28px auto; padding:16px; position:relative}
 
+  /* Белая непрозрачная шапка */
   .head{
-    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,0)),
-                radial-gradient(600px 200px at 50% -50px, rgba(240,162,2,.25), transparent 70%);
-    border:1px solid var(--grid); border-radius:18px; padding:12px 14px; margin-bottom:14px;
+    background:#fff;
+    color:#2a223e;
+    border:1px solid var(--grid);
+    border-radius:18px; padding:12px 14px; margin-bottom:14px;
     display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
   }
   .title{display:flex; align-items:center; gap:12px}
@@ -32,23 +34,26 @@
       radial-gradient(circle at 50% 0%, #fff 0 40%, transparent 41%);
     box-shadow: inset 0 -10px 18px rgba(0,0,0,.2), 0 6px 20px rgba(0,0,0,.3); color:#5a3b00; font-size:22px}
   h1{font-size:18px; margin:0}
-  .sub{font-size:12px; color:var(--ink-dim)}
 
   .controls{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
   button{appearance:none; border:1px solid #4a3a63; background:#33294a; color:var(--ink); padding:8px 12px; border-radius:10px; font:600 12px/1 ui-sans-serif,system-ui; cursor:pointer; transition:.2s; box-shadow:0 2px 0 rgba(0,0,0,.25)}
   button:hover{transform:translateY(-1px)}
 
   .hud{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
-  .pill{padding:6px 10px; border-radius:999px; background:#2a203b; border:1px solid var(--grid); font-size:12px}
+  .pill{padding:6px 10px; border-radius:999px; background:#2a203b; border:1px solid var(--grid); font-size:12px; color:var(--ink)}
 
   .board{--cols:6; display:grid; grid-template-columns:repeat(var(--cols), minmax(70px,1fr)); gap:10px;
          background:var(--card); border:1px solid var(--grid); border-radius:16px; padding:14px}
 
-  .card{position:relative; aspect-ratio: 3 / 4; border:1px solid var(--grid); border-radius:12px; background:#251d39; cursor:pointer; perspective: 900px}
+  .card{
+    position:relative; aspect-ratio: 3 / 4; border:1px solid var(--grid); border-radius:12px;
+    background:#251d39; cursor:pointer; perspective: 900px;
+    -webkit-tap-highlight-color: transparent;
+  }
   .card.disabled{pointer-events:none; opacity:.9}
   .inner{position:absolute; inset:0; transform-style:preserve-3d; transition: transform .35s cubic-bezier(.2,.6,.2,1)}
   .flipped .inner{transform: rotateY(180deg)}
-  .face{position:absolute; inset:0; display:grid; place-items:center; backface-visibility: hidden; -webkit-backface-visibility:hidden; border-radius:12px}
+  .face{position:absolute; inset:0; display:grid; place-items:center; backface-visibility: hidden; border-radius:12px}
   .front{background:
       radial-gradient(200px 120px at 50% -30px, rgba(255,255,255,.08), transparent 60%),
       repeating-linear-gradient(135deg, #2e2740, #2e2740 12px, #2a213b 12px, #2a213b 24px);
@@ -60,8 +65,25 @@
   .matched .inner{animation: pop .35s ease}
   @keyframes pop{ from{ transform: rotateY(180deg) scale(.9) } to{ transform: rotateY(180deg) scale(1) } }
 
-  .footer{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; flex-wrap:wrap}
-  .note{font-size:12px; color:var(--ink-dim)}
+  /* Оверлей поверх поля */
+  .overlay{
+    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    background: rgba(0,0,0,.55);
+    padding: 24px;
+    z-index: 1000;
+  }
+  .overlay.is-hidden{ display:none !important; }
+  .dialog{
+    width:min(520px, 92vw);
+    background:#231d35; color:var(--ink);
+    border:1px solid var(--grid); border-radius:16px; padding:18px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.35);
+  }
+  .dialog h2{margin:0 0 8px 0; font-size:18px}
+  .dialog p{margin:6px 0 0 0; font-size:14px; color:var(--ink-dim)}
+  .dialog .row{display:flex; gap:8px; margin-top:14px; flex-wrap:wrap}
+  .dialog.success{box-shadow: 0 0 0 2px rgba(80,200,120,.18) inset}
+  .dialog.warn{box-shadow: 0 0 0 2px rgba(216,67,21,.18) inset}
 </style>
 </head>
 <body>
@@ -76,30 +98,48 @@
       <div class="controls">
         <button id="restart">Начать заново</button>
       </div>
-      <div class="hud">
-        <span class="pill" id="moves">Ходы: 0/45</span>
+      <div class="hud" aria-live="polite" aria-atomic="true">
+        <span class="pill" id="moves">Ходы: 0/55</span>
         <span class="pill" id="time">Время: 00:00</span>
-        <span class="pill" id="pairs">Пары: 0/15</span>
+        <span class="pill" id="pairs">Пары: 0/20</span>
       </div>
     </div>
 
     <main class="board" id="board" aria-label="Игровое поле"></main>
+  </div>
 
+  <!-- Оверлей -->
+  <div id="overlay" class="overlay is-hidden">
+    <div id="dialog" class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-title">
+      <h2 id="dlg-title">Сообщение</h2>
+      <p id="dlg-text">Текст…</p>
+      <div class="row">
+        <button id="playAgain">Сыграть ещё</button>
+        <button id="closeOverlay" class="ok">Закрыть</button>
+      </div>
+    </div>
   </div>
 
 <script>
 (function(){
   const ICONS = [
-    '🍺','🍻','🎃','🕯️','🦉','📚','🧹','⚗️','🍫','🍎','🪄','🧙‍♀️','🕷️','🪶','🌕','🦇','🔮','🧤','🫙','🍪','🗺️','🧭','🏰','🧪','📜','🕰️','🧵','🪄'
+    '🍺','🍻','🎃','🕯️','🦉','📚','🧹','⚗️','🍫','🍎','🪄','🧙‍♀️','🕷️','🪶','🌕','🦇','🔮','🧤','🫙','🍪','🗺️','🧭','🏰','🧪','📜','🕰️','🧵'
   ];
-  const CFG = { cols:6, rows:5, pairs:15 };
-  const MOVES_LIMIT = 45; // лимит ходов для 15 пар
+  const CFG = { cols:8, rows:5, pairs:20 };
+  const MOVES_LIMIT = 55;
 
   const board = document.getElementById('board');
   const restartBtn = document.getElementById('restart');
   const movesEl = document.getElementById('moves');
   const timeEl  = document.getElementById('time');
   const pairsEl = document.getElementById('pairs');
+
+  const overlay = document.getElementById('overlay');
+  const dialog  = document.getElementById('dialog');
+  const dlgTitle= document.getElementById('dlg-title');
+  const dlgText = document.getElementById('dlg-text');
+  const btnAgain= document.getElementById('playAgain');
+  const btnClose= document.getElementById('closeOverlay');
 
   let state = { deck:[], matched:0, moves:0, started:false, secs:0, over:false };
   let timer = null;
@@ -110,9 +150,20 @@
   function startTimer(){ if(timer) return; timer=setInterval(tick,1000) }
   function stopTimer(){ if(timer){ clearInterval(timer); timer=null } }
 
+  function showOverlay({title, text, variant='success'}){
+    dlgTitle.textContent = title;
+    dlgText.innerHTML = text;
+    dialog.classList.remove('success','warn');
+    dialog.classList.add(variant);
+    overlay.classList.remove('is-hidden');
+    setTimeout(()=> btnAgain.focus(), 0);
+  }
+  function hideOverlay(){ overlay.classList.add('is-hidden'); }
+
   function buildDeck(){
     const base = ['🍺','🍻'];
-    const rest = shuffle(ICONS.filter(x=>!base.includes(x))).slice(0, CFG.pairs - base.length);
+    const unique = Array.from(new Set(ICONS));
+    const rest = shuffle(unique.filter(x=>!base.includes(x))).slice(0, CFG.pairs - base.length);
     const chosen = [...base, ...rest];
     return shuffle(chosen.flatMap(x=>[x,x]));
   }
@@ -126,18 +177,29 @@
   function render(){
     board.style.setProperty('--cols', CFG.cols);
     board.innerHTML='';
-    state.deck.forEach((icon, idx)=>{
-      const card = document.createElement('button'); card.className='card'; card.type='button'; card.setAttribute('data-icon', icon); card.setAttribute('aria-label','карточка');
+    state.deck.forEach((icon)=>{
+      const card = document.createElement('button');
+      card.className='card'; card.type='button';
+      card.setAttribute('data-icon', icon);
       card.innerHTML = `
         <div class="inner">
           <div class="face front"></div>
           <div class="face back"><div class="emoji">${icon}</div></div>
         </div>`;
       card.addEventListener('click', ()=>flip(card));
-      card.addEventListener('keyup', (e)=>{ if(e.key==='Enter' || e.key===' '){ flip(card) } });
+      card.addEventListener('keydown', (e)=>{
+        if(e.key==='Enter' || e.key===' '){ e.preventDefault(); flip(card); }
+      });
       board.appendChild(card);
     });
     updateHUD();
+  }
+
+  function disableButton(el){
+    el.classList.add('disabled');
+    el.setAttribute('disabled','true');
+    el.setAttribute('aria-disabled','true');
+    el.tabIndex = -1;
   }
 
   let lock=false, first=null;
@@ -153,47 +215,54 @@
     const b = second.getAttribute('data-icon');
 
     if(a===b){
-      [first,second].forEach(c=>{ c.classList.add('matched'); c.classList.add('disabled'); });
-      state.matched++;
-      first=null; updateHUD();
-      checkEnd();
+      [first,second].forEach(c=>{ c.classList.add('matched'); disableButton(c); });
+      state.matched++; first=null; updateHUD(); checkEnd();
     } else {
       lock=true;
       setTimeout(()=>{
-        [first,second].forEach(c=> c.classList.remove('flipped'));
-        first=null; lock=false; updateHUD();
-        checkEnd();
+        if(!state.over){ [first,second].forEach(c=> c.classList.remove('flipped')); }
+        first=null; lock=false; updateHUD(); checkEnd();
       }, 650);
     }
     updateHUD();
   }
 
-  function disableAll(){ Array.from(board.querySelectorAll('.card')).forEach(c=> c.classList.add('disabled')) }
+  function disableAll(){ Array.from(board.querySelectorAll('.card')).forEach(disableButton) }
 
   function checkEnd(){
     if(state.matched>=CFG.pairs){
       stopTimer(); state.over=true; disableAll();
-      setTimeout(()=> alert(`Победа! Все пары собраны.
-Ходы: ${state.moves}/${MOVES_LIMIT}
-Время: ${fmt(Math.floor(state.secs/60))}:${fmt(state.secs%60)}`), 50);
+      showOverlay({
+        title:'🏆 Победа!',
+        text:`Все пары собраны.<br>Ходы: <b>${state.moves}/${MOVES_LIMIT}</b><br>Время: <b>${fmt(Math.floor(state.secs/60))}:${fmt(state.secs%60)}</b>`,
+        variant:'success'
+      });
       return;
     }
     if(state.moves>=MOVES_LIMIT){
       stopTimer(); state.over=true; disableAll();
-      setTimeout(()=> alert('Ходы закончились! Попробуй ещё раз.'), 50);
+      showOverlay({
+        title:'⛔ Ходы закончились',
+        text:'Попробуй ещё раз — возможно, в этот раз повезёт больше!',
+        variant:'warn'
+      });
     }
   }
 
   function reset(){
-    stopTimer(); state = { deck:buildDeck(), matched:0, moves:0, started:false, secs:0, over:false };
+    hideOverlay(); stopTimer();
+    state = { deck:buildDeck(), matched:0, moves:0, started:false, secs:0, over:false };
     render();
   }
 
   restartBtn.addEventListener('click', reset);
+  btnAgain.addEventListener('click', reset);
+  btnClose.addEventListener('click', hideOverlay);
+  overlay.addEventListener('click', (e)=>{ if(e.target===overlay) hideOverlay(); });
 
-  // init
   reset();
 })();
 </script>
 </body>
 </html>
+[/html]
