@@ -42,11 +42,13 @@
   .hud{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
   .pill{padding:6px 10px; border-radius:999px; background:#2a203b; border:1px solid var(--grid); font-size:12px; color:var(--ink)}
 
+  /* 6×6 */
   .board{--cols:6; display:grid; grid-template-columns:repeat(var(--cols), minmax(70px,1fr)); gap:10px;
          background:var(--card); border:1px solid var(--grid); border-radius:16px; padding:14px}
 
   .card{
-    position:relative; aspect-ratio: 3 / 4; border:1px solid var(--grid); border-radius:12px;
+    position:relative; aspect-ratio: 1 / 1; /* квадратные */
+    border:1px solid var(--grid); border-radius:12px;
     background:#251d39; cursor:pointer; perspective: 900px;
     -webkit-tap-highlight-color: transparent;
   }
@@ -99,9 +101,9 @@
         <button id="restart">Начать заново</button>
       </div>
       <div class="hud" aria-live="polite" aria-atomic="true">
-        <span class="pill" id="moves">Ходы: 0/55</span>
+        <span class="pill" id="moves">Ходы: 0/48</span>
         <span class="pill" id="time">Время: 00:00</span>
-        <span class="pill" id="pairs">Пары: 0/20</span>
+        <span class="pill" id="pairs">Пары: 0/18</span>
       </div>
     </div>
 
@@ -125,8 +127,9 @@
   const ICONS = [
     '🍺','🍻','🎃','🕯️','🦉','📚','🧹','⚗️','🍫','🍎','🪄','🧙‍♀️','🕷️','🪶','🌕','🦇','🔮','🧤','🫙','🍪','🗺️','🧭','🏰','🧪','📜','🕰️','🧵'
   ];
-  const CFG = { cols:5, rows:8, pairs:20 };
-  const MOVES_LIMIT = 55;
+  /* 6×6 = 36 карточек = 18 пар */
+  const CFG = { cols:6, rows:6, pairs:18 };
+  const MOVES_LIMIT = 48;
 
   const board = document.getElementById('board');
   const restartBtn = document.getElementById('restart');
