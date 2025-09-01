@@ -10,19 +10,33 @@
     --grid:#3a2f4d; --accent:#f0a202; --good:#50c878;
   }
   html,body{height:100%}
-  body{ margin:0; background: radial-gradient(1200px 800px at 20% 0%, #2a223e 0%, var(--bg) 60%);
-        color:var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif; }
-  .wrap{ max-width:auto; margin:28px auto; padding:16px }
+  body{
+    margin:0;
+    background: radial-gradient(1200px 800px at 20% 0%, #2a223e 0%, var(--bg) 60%);
+    color:var(--ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+  }
+
+  .wrap{ max-width:1100px; margin:28px auto; padding:16px }
+
   .header{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:12px }
   h1{ font-size:20px; margin:0 }
   .sub{ color:var(--ink-dim); font-size:13px }
 
   .board{ background:var(--card); border:1px solid var(--grid); border-radius:16px; padding:14px; }
-  .grid{ --cols:4; display:grid; grid-template-columns: repeat(var(--cols), 1fr); gap:10px }
+
+  /* АДАПТИВНАЯ СЕТКА: кол-во колонок подстраивается под ширину */
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap:10px;
+  }
+
   .cell{
     background:#2c2340; border:1px solid var(--grid); border-radius:12px; padding:10px; text-align:left;
     min-height:90px; display:flex; gap:10px; align-items:flex-start; position:relative;
     transition: .15s transform ease, .15s box-shadow ease, .15s border-color ease;
+    width:100%;
   }
   .cell:hover{ transform: translateY(-2px); border-color:#5a4a76 }
   .num{ flex:0 0 auto; width:28px; height:28px; border-radius:8px; display:grid; place-items:center; font-weight:800; background:#201830; border:1px solid #4a3a63 }
@@ -37,6 +51,11 @@
   button:hover{ transform:translateY(-1px) }
   .ok{ background:#1f3a2a; border-color:#2a6a4a }
   .danger{ background:#3a2222; border-color:#6a2a2a }
+
+  /* Можно сузить карточки на маленьких экранах */
+  @media (max-width:520px){
+    .grid{ grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  }
 </style>
 </head>
 <body>
@@ -183,7 +202,7 @@
     const usedFacts = new Set();
     state.picks.forEach((fi, i)=>{ if(state.marked[i]){ keepIdx.push(i); usedFacts.add(fi); } });
 
-    // Составим список позиций, которые нужно заменить
+    // Список позиций для замены
     const toReplace = [];
     state.picks.forEach((fi, i)=>{ if(!state.marked[i]) toReplace.push(i); else usedFacts.add(fi); });
 
