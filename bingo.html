@@ -8,7 +8,18 @@
   :root{
     --bg:#1a1625; --card:#261e36; --ink:#f7f2e8; --ink-dim:#cfc6b4;
     --grid:#3a2f4d; --accent:#f0a202; --good:#50c878;
+
+    /* БАЗОВЫЕ РАЗМЕРЫ (px) */
+    --base-cell-min:220;
+    --base-cell-min-sm:180;
+    --base-cell-minh:90;
+    --base-pad:10;
+    --base-font:13;
+    --base-num:28;
+    --base-free:8;
+    --scale:1; /* текущий масштаб */
   }
+
   html,body{height:100%}
   body{
     margin:0;
@@ -28,21 +39,33 @@
   /* АДАПТИВНАЯ СЕТКА: кол-во колонок подстраивается под ширину */
   .grid{
     display:grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(
+      auto-fill,
+      minmax(calc(var(--base-cell-min) * 1px * var(--scale)), 1fr)
+    );
     gap:10px;
   }
 
   .cell{
-    background:#2c2340; border:1px solid var(--grid); border-radius:12px; padding:10px; text-align:left;
-    min-height:90px; display:flex; gap:10px; align-items:flex-start; position:relative;
+    background:#2c2340; border:1px solid var(--grid); border-radius:12px;
+    padding:calc(var(--base-pad) * 1px * var(--scale));
+    text-align:left;
+    min-height:calc(var(--base-cell-minh) * 1px * var(--scale));
+    display:flex; gap:10px; align-items:flex-start; position:relative;
     transition: .15s transform ease, .15s box-shadow ease, .15s border-color ease;
     width:100%;
   }
   .cell:hover{ transform: translateY(-2px); border-color:#5a4a76 }
-  .num{ flex:0 0 auto; width:28px; height:28px; border-radius:8px; display:grid; place-items:center; font-weight:800; background:#201830; border:1px solid #4a3a63 }
-  .txt{ font-size:13px; line-height:1.25 }
+  .num{
+    flex:0 0 auto;
+    width:calc(var(--base-num) * 1px * var(--scale));
+    height:calc(var(--base-num) * 1px * var(--scale));
+    border-radius:8px; display:grid; place-items:center; font-weight:800;
+    background:#201830; border:1px solid #4a3a63
+  }
+  .txt{ font-size:calc(var(--base-font) * 1px * var(--scale)); line-height:1.25 }
   .cell.marked{ outline:2px solid var(--accent); box-shadow: inset 0 0 0 9999px rgba(240,162,2,.07); }
-  .free{ position:absolute; right:8px; bottom:6px; font-size:10px; opacity:.8; color:#b39ddb }
+  .free{ position:absolute; right:8px; bottom:6px; font-size:calc(var(--base-free) * 1px * var(--scale)); opacity:.8; color:#b39ddb }
 
   /* Панель управления снизу */
   .controls{ display:flex; gap:10px; align-items:center; justify-content:center; flex-wrap:wrap; margin:16px auto 0; padding:12px; }
@@ -52,9 +75,23 @@
   .ok{ background:#1f3a2a; border-color:#2a6a4a }
   .danger{ background:#3a2222; border-color:#6a2a2a }
 
+  /* Кнопки масштаба */
+  .zoom{
+    display:flex; gap:6px; align-items:center; flex-wrap:wrap;
+  }
+  .zoom .zoombtn{ padding:8px 10px; min-width:44px; }
+  .zoom .zoom-indicator{
+    padding:6px 10px; border-radius:999px; background:#2a203b; border:1px solid var(--grid); font-size:12px
+  }
+
   /* Можно сузить карточки на маленьких экранах */
   @media (max-width:520px){
-    .grid{ grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+    .grid{
+      grid-template-columns: repeat(
+        auto-fill,
+        minmax(calc(var(--base-cell-min-sm) * 1px * var(--scale)), 1fr)
+      );
+    }
   }
 </style>
 </head>
@@ -62,11 +99,16 @@
   <div class="wrap">
     <div class="header">
       <div>
-        <h1></h1>
-        <div class="sub"></div>
+        <h1>Учебное Бинго</h1>
+        <div class="sub">Осень в Хогвартсе</div>
       </div>
-      <div class="row">
-        <span class="badge"></span>
+
+      <!-- Панель масштаба -->
+      <div class="zoom" aria-label="Масштаб">
+        <button id="zoomOut" class="zoombtn" type="button" title="Уменьшить">−</button>
+        <button id="zoomReset" class="zoombtn" type="button" title="Сбросить масштаб">100%</button>
+        <button id="zoomIn" class="zoombtn" type="button" title="Увеличить">+</button>
+        <span id="zoomLabel" class="zoom-indicator">100%</span>
       </div>
     </div>
 
@@ -146,6 +188,7 @@
 
   // === Состояние ===
   const key = 'hogwarts_bingo_card_v1';
+  const scaleKey = 'hogwarts_bingo_scale_v1';
   const state = { locked:false, picks:[], marked:[] };
 
   // Helpers
@@ -164,6 +207,38 @@
   const resetMarksBtn = document.getElementById('resetMarks');
   const lockBtn = document.getElementById('lock');
 
+  const zoomOutBtn = document.getElementById('zoomOut');
+  const zoomInBtn = document.getElementById('zoomIn');
+  const zoomResetBtn = document.getElementById('zoomReset');
+  const zoomLabel = document.getElementById('zoomLabel');
+
+  // ===== Масштабирование =====
+  const root = document.documentElement;
+  const clamp = (v, min, max)=> Math.min(max, Math.max(min, v));
+  let scale = 1;
+
+  function loadScale(){
+    const saved = parseFloat(localStorage.getItem(scaleKey));
+    scale = isNaN(saved) ? 1 : clamp(saved, 0.7, 1.6);
+    applyScale();
+  }
+  function applyScale(){
+    root.style.setProperty('--scale', String(scale));
+    const pct = Math.round(scale * 100);
+    zoomLabel.textContent = pct + '%';
+    zoomResetBtn.textContent = '100%';
+    localStorage.setItem(scaleKey, String(scale));
+  }
+  function zoom(delta){
+    scale = clamp((Math.round((scale + delta)*100)/100), 0.7, 1.6); // шаг 0.05–0.1
+    applyScale();
+  }
+
+  zoomOutBtn.addEventListener('click', ()=> zoom(-0.1));
+  zoomInBtn.addEventListener('click', ()=> zoom(+0.1));
+  zoomResetBtn.addEventListener('click', ()=>{ scale = 1; applyScale(); });
+
+  // ===== Карточки =====
   function ensureInit(){
     if(!Array.isArray(state.picks) || state.picks.length!==20){
       const all = FACTS.map((_,i)=>i);
@@ -198,11 +273,9 @@
   function refreshFree(){
     if(state.locked){ alert('Карточка зафиксирована. Снимите фиксацию, чтобы обновить.'); return }
     ensureInit();
-    const keepIdx = [];
     const usedFacts = new Set();
-    state.picks.forEach((fi, i)=>{ if(state.marked[i]){ keepIdx.push(i); usedFacts.add(fi); } });
+    state.picks.forEach((fi, i)=>{ if(state.marked[i]) usedFacts.add(fi); });
 
-    // Список позиций для замены
     const toReplace = [];
     state.picks.forEach((fi, i)=>{ if(!state.marked[i]) toReplace.push(i); else usedFacts.add(fi); });
 
@@ -217,7 +290,7 @@
   lockBtn.addEventListener('click', ()=>{ state.locked=!state.locked; lockBtn.textContent = state.locked? 'Снять фиксацию' : 'Зафиксировать карточку'; save(); });
 
   // Init
-  (function init(){ load(); ensureInit(); render(); })();
+  (function init(){ load(); loadScale(); ensureInit(); render(); })();
 })();
 </script>
 </body>
