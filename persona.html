@@ -457,36 +457,111 @@
         });
       }
 
-      function saveCanvas(canvas, filename){
-        if (canvas.toBlob) {
-          canvas.toBlob(function(blob){
-            if(!blob){ fallback(); return; }
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            setTimeout(()=>URL.revokeObjectURL(url), 5000);
-          }, 'image/png');
-        } else {
-          fallback();
-        }
-        function fallback(){
-          try{
-            const a = document.createElement('a');
-            a.href = canvas.toDataURL('image/png');
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-          }catch(e){
-            alert('Не удалось сохранить PNG. Уменьшите количество/размер картинок или загружайте их файлами.');
-            console.error('[png] fallback failed', e);
-          }
-        }
+function saveCanvas(canvas, filename){
+  // 1) Пытаемся стандартный download (может быть заблокирован sandbox'ом)
+  try {
+    if (canvas.toBlob) {
+      canvas.toBlob(function(blob){
+        if(!blob){ return fallback(canvas); }
+        const url = URL.createObjectURL(blob);
+
+        // Путь 1: обычная загрузка (может не сработать в sandbox)
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        // Если песочница заблокировала — у нас всё равно есть url, идём фолбэком
+        setTimeout(()=>URL.revokeObjectURL(url), 5000);
+
+        // Небольшая страховка: показываем превью, если скачивание не началось
+        setTimeout(()=>maybeShowPreview(url, blob, filename), 300);
+      }, 'image/png');
+      return;
+    }
+  } catch(e) {
+    console.warn('[png] download blocked, using fallback', e);
+  }
+  // 2) Фолбэк через dataURL
+  fallback(canvas);
+
+  function fallback(cnv){
+    try{
+      const data = cnv.toDataURL('image/png');
+      // Пробуем открыть в новой вкладке (некоторые песочницы разрешают popups)
+      const w = window.open(data, '_blank');
+      if (!w) {
+        // Если попапы запрещены — просто вставим превью изображение под формой
+        maybeShowPreview(data, null, filename);
       }
+    }catch(e){
+      alert('Не удалось сохранить/открыть PNG. Ваша страница может работать в песочнице без разрешения на скачивание.');
+      console.error('[png] full fallback failed', e);
+    }
+  }
+
+  // Вставляем превью + кнопку «Открыть в новой вкладке» + «Копировать в буфер»
+  async function maybeShowPreview(urlOrData, blob, filename){
+    let holder = document.getElementById('pngPreviewHolder');
+    if (!holder){
+      holder = document.createElement('div');
+      holder.id = 'pngPreviewHolder';
+      holder.style.marginTop = '10px';
+      holder.style.padding = '10px';
+      holder.style.border = '1px dashed var(--line)';
+      holder.style.borderRadius = '12px';
+      holder.innerHTML = '<div style="font-size:12px;opacity:.9;margin-bottom:6px">Скачивание заблокировано песочницей. Сохраните вручную:</div>';
+      document.querySelector('.panel .btnbar').after(holder);
+    }
+
+    // Картина
+    let img = holder.querySelector('img');
+    if(!img){
+      img = document.createElement('img');
+      img.style.maxWidth = '100%';
+      img.style.borderRadius = '10px';
+      img.style.display = 'block';
+      img.style.marginBottom = '6px';
+      holder.appendChild(img);
+    }
+    img.src = urlOrData;
+
+    // Кнопки действий
+    let bar = holder.querySelector('.actions');
+    if(!bar){
+      bar = document.createElement('div');
+      bar.className = 'actions';
+      bar.style.display = 'flex';
+      bar.style.gap = '8px';
+      holder.appendChild(bar);
+
+      const openBtn = document.createElement('button');
+      openBtn.className = 'btn';
+      openBtn.textContent = 'Открыть в новой вкладке';
+      openBtn.onclick = ()=> window.open(urlOrData, '_blank');
+      bar.appendChild(openBtn);
+
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'btn';
+      copyBtn.textContent = 'Копировать в буфер';
+      copyBtn.onclick = async ()=>{
+        try{
+          const b = blob || (await (await fetch(urlOrData)).blob());
+          await navigator.clipboard.write([new ClipboardItem({ 'image/png': b })]);
+          copyBtn.textContent = 'Скопировано ✓';
+          setTimeout(()=>copyBtn.textContent='Копировать в буфер', 1500);
+        }catch(e){
+          alert('Не удалось скопировать в буфер. Сохраните изображение через правый клик.');
+          console.error(e);
+        }
+      };
+      bar.appendChild(copyBtn);
+    }
+  }
+}
+
 
       const fname = (document.getElementById('name').value || 'anketa') + '.png';
 
