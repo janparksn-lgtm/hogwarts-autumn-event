@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Осенняя анкета — выборы + магический блок + гибкий плейлист</title>
+<style>
+  :root{
+    --bg:#1b1726; 
+    --card:#261e36; 
+    --ink:#f7f2e8;
+    --muted:#000000;
+    --line:#3a2f4d;
+    --accent:#6d28d9;      /* фиолетовый */
+    --accent2:#d4a017;     /* золотой */
+    --base-font:12px;      /* фиксированный размер шрифта в карточке */
+  }
+
+  /* Палитры факультетов (фон/карточка/границы), акценты — фиолет/золото */
+  .gryff{ --bg:#2b0a0a; --card:#3a1212; --line:#5a1b1b; --ink:#f7f2e8; }
+  .rav  { --bg:#0b132b; --card:#14213d; --line:#1f2a44; --ink:#f7f2e8; }
+  .huff { --bg:#1f1a0a; --card:#2a2412; --line:#3b3217; --ink:#f7f2e8; }
+  .sly  { --bg:#0d1f17; --card:#123425; --line:#1b4030; --ink:#f7f2e8; }
+
+  body{
+    margin:0;
+    background: radial-gradient(1100px 760px at 12% -8%, #2a223e 0%, var(--bg) 60%);
+    color:var(--ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+  }
+
+  .wrap{ max-width:1120px; margin:24px auto; padding:0 16px; display:grid; gap:16px; grid-template-columns: 400px 1fr; }
+  @media (max-width:1000px){ .wrap{ grid-template-columns:1fr } }
+
+  /* Панель формы */
+  .panel{ background:rgba(255,255,255,.03); border:1px solid var(--line); border-radius:16px; padding:14px; }
+  .panel h2{ margin:0 0 10px; font-size:18px }
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:10px }
+  .field{ display:flex; flex-direction:column; gap:6px; margin-bottom:10px }
+  .field label{ font-size:12px; color:var(--muted) }
+  .field input[type="text"], .field input[type="url"], .field input[type="number"], .field select{
+    background:#14111e; color:var(--ink); border:1px solid var(--line); border-radius:10px; padding:8px 10px; font-size:14px;
+  }
+  .hint{ font-size:11px; color:#a1a1a1 }
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; border:1px solid var(--line); background:rgba(255,255,255,.05); color:var(--ink); border-radius:12px; padding:10px 12px; font-weight:600; }
+  .btn.primary{ background:linear-gradient(180deg, var(--accent), var(--accent2)); color:#1a1325; border:none }
+  .btnbar{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px }
+  .warn{ font-size:12px; color:#ffd18a; background:rgba(212,160,23,.12); border:1px solid rgba(212,160,23,.35); padding:8px 10px; border-radius:10px; }
+
+  /* Превью карточки */
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px;
+    box-shadow:0 10px 30px rgba(0,0,0,.25);
+    font-size: var(--base-font);
+    color: var(--ink);
+  }
+  .ap-head{
+    display:grid; grid-template-columns: 90px 1fr; gap:12px; align-items:center;
+    padding:12px; border-radius:14px; border:1px solid var(--line); margin-bottom:12px;
+    background: linear-gradient(100deg, rgba(109,40,217,.18), rgba(212,160,23,.10));
+  }
+  .ap-ava{ width:90px; height:90px; border-radius:12px; overflow:hidden; border:1px solid var(--line); box-shadow:0 6px 16px rgba(0,0,0,.25) }
+  .ap-ava img{ width:100%; height:100%; object-fit:cover }
+  .ap-title h2{ margin:0; font-size:18px; letter-spacing:.2px; color:var(--accent2) }
+  .ap-title .sub{ margin-top:4px; color:var(--ink); opacity:.9; font-size:12px }
+
+  .ap-grid{ display:grid; grid-template-columns: 1.05fr .95fr; gap:14px }
+  @media (max-width:700px){ .ap-grid{ grid-template-columns:1fr } }
+
+  .block-title{ margin:0 0 8px; font-size:14px; color:var(--accent2); font-weight:700 }
+
+  /* This-or-That (форма и превью) */
+  .tt-wrap{ display:grid; gap:8px }
+  .tt-item{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; border:1px solid var(--line); border-radius:12px; padding:8px; background:rgba(255,255,255,.03) }
+  .tt-q{ font-weight:800; color:var(--accent); min-width:200px; font-size:12px }
+  .tt-opts{ display:flex; gap:8px; flex-wrap:wrap }
+  .tt-opts label{ display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:6px 10px; border:1px solid var(--line); border-radius:999px; cursor:pointer; background:rgba(0,0,0,.08) }
+  .tt-opts input{ accent-color: var(--accent2); }
+
+  .tt-badges{ display:flex; gap:8px; flex-wrap:wrap; }
+  .tt-badge{ font-size:11px; padding:6px 10px; border:1px solid var(--line); border-radius:999px; background:rgba(255,255,255,.06) }
+  .tt-badge b{ color:var(--accent2) }
+
+  .tracks{ display:grid; gap:6px; margin-top:6px }
+  .track{ padding:8px; border:1px dashed var(--line); border-radius:10px; background:rgba(255,255,255,.03); font-size:12px }
+  .track a{ color:var(--ink); text-decoration:none }
+  .track a:hover{ color:var(--accent2) }
+
+  .mood{ margin-top:14px }
+  .mood-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px }
+  @media (max-width:600px){ .mood-grid{ grid-template-columns:repeat(2,1fr) } }
+  .mood-grid img{ width:100%; height:140px; object-fit:cover; border-radius:12px; border:1px solid var(--line) }
+
+  .chips{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px }
+  .chip{ font-size:11px; padding:6px 10px; border:1px solid var(--line); border-radius:999px; background:rgba(255,255,255,.06) }
+  .chip b{ color:var(--accent2) }
+
+  .error{ outline:1px solid #ef4444 }
+  .hidden{ display:none !important }
+</style>
+</head>
+<body class="">
+  <div class="wrap">
+
+    <!-- Панель ввода -->
+    <div class="panel">
+      <h2>Заполни анкету</h2>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>Имя персонажа</label>
+          <input type="text" id="name" value="Имя Фамилия">
+        </div>
+        <div class="field">
+          <label>Ник/статус</label>
+          <input type="text" id="status" value="@nickname • status">
+        </div>
+
+        <div class="field">
+          <label>Факультет (палитра)</label>
+          <select id="palette">
+            <option value="">— База —</option>
+            <option value="gryff">Гриффиндор</option>
+            <option value="rav">Рейвенкло</option>
+            <option value="huff">Хаффлпафф</option>
+            <option value="sly">Слизерин</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Аватар — URL или файл (файл надёжнее)</label>
+        <input type="url" id="avaUrl" placeholder="https://...">
+        <input type="file" id="avaFile" accept="image/*">
+      </div>
+
+      <h3>Предпочтения</h3>
+      <div class="tt-wrap" id="tt-autumn-form">
+        <div class="tt-item"><div class="tt-q">Жутковатая осень или уютная?</div>
+          <div class="tt-opts">
+            <label><input type="radio" name="tta1" value="Жутковатая осень">Жутковатая осень</label>
+            <label><input type="radio" name="tta1" value="Уютная осень">Уютная осень</label>
+          </div>
+        </div>
+        <div class="tt-item"><div class="tt-q">Тыквенный сок или глинтвейн?</div>
+          <div class="tt-opts">
+            <label><input type="radio" name="tta2" value="Тыквенный сок">Тыквенный сок</label>
+            <label><input type="radio" name="tta2" value="Глинтвейн">Глинтвейн</label>
+          </div>
+        </div>
+        <div class="tt-item"><div class="tt-q">Шум дождя или треск камина?</div>
+          <div class="tt-opts">
+            <label><input type="radio" name="tta3" value="Шум дождя">Шум дождя</label>
+            <label><input type="radio" name="tta3" value="Треск камина">Треск камина</label>
+          </div>
+        </div>
+        <div class="tt-item"><div class="tt-q">Заниматься в библиотеке или читать во дворе?</div>
+          <div class="tt-opts">
+            <label><input type="radio" name="tta4" value="Заниматься в библиотеке">В библиотеке</label>
+            <label><input type="radio" name="tta4" value="Читать во дворе">Во дворе</label>
+          </div>
+        </div>
+        <div class="tt-item"><div class="tt-q">Вырезать или раскрасить тыквы?</div>
+          <div class="tt-opts">
+            <label><input type="radio" name="tta5" value="Вырезать тыквы">Вырезать</label>
+            <label><input type="radio" name="tta5" value="Раскрасить тыквы">Раскрасить</label>
+          </div>
+        </div>
+        <div class="tt-item"><div class="tt-q">Собирать конфеты или сидеть у костра?</div>
+          <div class="tt-opts">
+            <label><input type="radio" name="tta6" value="Собирать конфеты">Собирать конфеты</label>
+            <label><input type="radio" name="tta6" value="Сидеть у костра">У костра</label>
+          </div>
+        </div>
+      </div>
+
+      <h3>Что выберет?</h3>
+      <div class="tt-wrap" id="tt-magic-form">
+        <div class="tt-item"><div class="tt-q">Мантия-невидимка или Карта Мародёров?</div>
+          <div class="tt-opts">
+            <label><input type="radio" name="ttm1" value="Мантия-невидимка">Мантия-невидимка</label>
+            <label><input type="radio" name="ttm1" value="Карта Мародёров">Карта Мародёров</label>
+          </div>
+        </div>
+        <div class="tt-item"><div class="tt-q">Метла или гиппогриф?</div>
+          <div class="tt-opts">
+            <label><input type="radio" name="ttm2" value="Метла">Метла</label>
+            <label><input type="radio" name="ttm2" value="Гиппогриф">Гиппогриф</label>
+          </div>
+        </div>
+        <div class="tt-item"><div class="tt-q">Левитация или телепортация (аппарация)?</div>
+          <div class="tt-opts">
+            <label><input type="radio" name="ttm3" value="Левитация">Левитация</label>
+            <label><input type="radio" name="ttm3" value="Аппарация">Аппарация</label>
+          </div>
+        </div>
+        <div class="tt-item"><div class="tt-q">Феликс Фелицис или Омут памяти?</div>
+          <div class="tt-opts">
+            <label><input type="radio" name="ttm4" value="Феликс Фелицис">Феликс Фелицис</label>
+            <label><input type="radio" name="ttm4" value="Омут памяти">Омут памяти</label>
+          </div>
+        </div>
+        <div class="tt-item"><div class="tt-q">Патронус или Люмос?</div>
+          <div class="tt-opts">
+            <label><input type="radio" name="ttm5" value="Патронус">Патронус</label>
+            <label><input type="radio" name="ttm5" value="Люмос">Люмос</label>
+          </div>
+        </div>
+        <div class="tt-item"><div class="tt-q">Зельеварение или Трансфигурация?</div>
+          <div class="tt-opts">
+            <label><input type="radio" name="ttm6" value="Зельеварение">Зельеварение</label>
+            <label><input type="radio" name="ttm6" value="Трансфигурация">Трансфигурация</label>
+          </div>
+        </div>
+      </div>
+
+      <h3>Плейлист (динамический)</h3>
+      <div class="grid-2">
+        <div class="field"><label>Количество треков (0–12)</label><input id="tracksCount" type="number" min="0" max="12" value="3"></div>
+      </div>
+      <div id="tracksFields" class="grid-2"></div>
+
+      <h3>Moodboard (6 изображений)</h3>
+      <div class="grid-2">
+        <div class="field"><label>URL 1</label><input id="m1u" placeholder="https://..."><input type="file" id="m1f" accept="image/*"></div>
+        <div class="field"><label>URL 2</label><input id="m2u"><input type="file" id="m2f" accept="image/*"></div>
+        <div class="field"><label>URL 3</label><input id="m3u"><input type="file" id="m3f" accept="image/*"></div>
+        <div class="field"><label>URL 4</label><input id="m4u"><input type="file" id="m4f" accept="image/*"></div>
+        <div class="field"><label>URL 5</label><input id="m5u"><input type="file" id="m5f" accept="image/*"></div>
+        <div class="field"><label>URL 6</label><input id="m6u"><input type="file" id="m6f" accept="image/*"></div>
+      </div>
+
+      <h3>Ассоциации с осенью</h3>
+      <div class="grid-2">
+        <div class="field"><label>Цвет</label><input id="chipColor" value="ваш ответ..."></div>
+        <div class="field"><label>Вкус</label><input id="chipTaste" value="ваш ответ..."></div>
+        <div class="field"><label>Запах</label><input id="chipSmell" value="ваш ответ..."></div>
+        <div class="field"><label>Звук</label><input id="chipSound" value="ваш ответ..."></div>
+        <div class="field"><label>Предмет</label><input id="chipItem" value="ваш ответ..."></div>
+      </div>
+
+      <div class="btnbar">
+        <button class="btn primary" id="buildBtn">Составить анкету</button>
+        <button class="btn" id="pngBtn" disabled>Скачать PNG</button>
+      </div>
+      <p class="warn" id="corsWarn" style="display:none">Некоторые изображения по URL не удалось встроить. Загрузите их файлами — тогда PNG сохранится.</p>
+    </div>
+
+    <!-- Превью (PNG-область) -->
+    <div id="previewArea">
+      <div id="profileCard" class="card">
+        <div class="ap-head">
+          <div class="ap-ava"><img id="v-ava" src="" alt="avatar"></div>
+          <div class="ap-title">
+            <h2 id="v-name">Имя персонажа</h2>
+            <div class="sub" id="v-status">Ник/статус</div>
+          </div>
+        </div>
+
+        <div class="ap-grid">
+          <div>
+            <h3 class="block-title">Предпочтения</h3>
+            <div class="tt-badges" id="v-tt-autumn"></div>
+            <h3 class="block-title" style="margin-top:10px">Что выберет?</h3>
+            <div class="tt-badges" id="v-tt-magic"></div>
+          </div>
+          <div>
+            <h3 class="block-title">Плейлист персонажа</h3>
+            <div class="tracks" id="v-tracks"></div>
+          </div>
+        </div>
+
+        <div class="mood">
+          <h3 class="block-title">Школьный moodboard</h3>
+          <div class="mood-grid" id="v-moods"></div>
+          <div class="chips" id="v-chips"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- html2canvas -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script>
+    // Определения пар "либо/либо"
+    const TT_AUTUMN = [
+      {name:'tta1', a1:'Жутковатая осень', a2:'Уютная осень'},
+      {name:'tta2', a1:'Тыквенный сок', a2:'Глинтвейн'},
+      {name:'tta3', a1:'Шум дождя', a2:'Треск камина'},
+      {name:'tta4', a1:'Заниматься в библиотеке', a2:'Читать во дворе'},
+      {name:'tta5', a1:'Вырезать тыквы', a2:'Раскрасить тыквы'},
+      {name:'tta6', a1:'Собирать конфеты', a2:'Сидеть у костра'},
+    ];
+    const TT_MAGIC = [
+      {name:'ttm1', a1:'Мантия-невидимка', a2:'Карта Мародёров'},
+      {name:'ttm2', a1:'Метла', a2:'Гиппогриф'},
+      {name:'ttm3', a1:'Левитация', a2:'Аппарация'},
+      {name:'ttm4', a1:'Феликс Фелицис', a2:'Омут памяти'},
+      {name:'ttm5', a1:'Патронус ночью', a2:'Люмос'},
+      {name:'ttm6', a1:'Зельеварение', a2:'Трансфигурация'},
+    ];
+
+    // Смена палитры (класс на body)
+    function setPalette(p){
+      document.body.classList.remove('gryff','rav','huff','sly');
+      if(p) document.body.classList.add(p);
+    }
+
+    // Файлы/URL -> dataURL (для PNG)
+    function fileToDataURL(file){
+      return new Promise((res, rej)=>{ if(!file) return res(null); const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(file); });
+    }
+    async function urlToDataURL(url){
+      try{
+        const resp = await fetch(url, {mode:'cors', credentials:'omit'});
+        if(!resp.ok) throw new Error('HTTP '+resp.status);
+        const blob = await resp.blob();
+        return await new Promise((res, rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(blob); });
+      }catch(e){
+        return {__error:true, message:String(e)};
+      }
+    }
+    async function resolveImg(urlId, fileId, markEl){
+      const f = document.getElementById(fileId).files[0];
+      if(f){ markEl?.classList.remove('error'); return await fileToDataURL(f); }
+      const url = (document.getElementById(urlId).value||'').trim();
+      if(!url){ markEl?.classList.remove('error'); return null; }
+      const res = await urlToDataURL(url);
+      if(res && res.__error){ markEl?.classList.add('error'); return null; }
+      markEl?.classList.remove('error'); return res;
+    }
+    function setImg(elId, src){ const el=document.getElementById(elId); el.src = src || ''; }
+
+    // Чтение «либо/либо» в бейджи
+    function readThisThat(pairs){
+      const res = [];
+      pairs.forEach(row=>{
+        const checked = document.querySelector(`input[name="${row.name}"]:checked`);
+        if(checked){ res.push(checked.value); }
+      });
+      return res;
+    }
+    function renderBadges(containerId, items){
+      const wrap = document.getElementById(containerId);
+      wrap.innerHTML='';
+      if(!items.length){
+        const span=document.createElement('span'); span.className='tt-badge'; span.textContent='— нет выбранных ответов —';
+        wrap.appendChild(span); return;
+      }
+      items.forEach(v=>{ const span=document.createElement('span'); span.className='tt-badge'; span.innerHTML=`<b>${v}</b>`; wrap.appendChild(span); });
+    }
+
+    // Динамические поля плейлиста
+    function rebuildTrackFields(){
+      const n = Math.max(0, Math.min(12, parseInt(document.getElementById('tracksCount').value || '0', 10)));
+      const cont = document.getElementById('tracksFields'); cont.innerHTML='';
+      for(let i=1;i<=n;i++){
+        const f1 = document.createElement('div'); f1.className='field';
+        f1.innerHTML = `<label>Трек ${i} (текст)</label><input id="t${i}" value="">`;
+        const f2 = document.createElement('div'); f2.className='field';
+        f2.innerHTML = `<label>URL ${i}</label><input id="t${i}u" placeholder="https://...">`;
+        cont.appendChild(f1); cont.appendChild(f2);
+      }
+    }
+    function collectTracks(){
+      const n = Math.max(0, Math.min(12, parseInt(document.getElementById('tracksCount').value || '0', 10)));
+      const arr = [];
+      for(let i=1;i<=n;i++){
+        const text = (document.getElementById(`t${i}`)?.value)||'';
+        const url  = (document.getElementById(`t${i}u`)?.value)||'';
+        arr.push({text, url});
+      }
+      return arr;
+    }
+    function buildTracks(tracks){
+      const wrap = document.getElementById('v-tracks'); wrap.innerHTML='';
+      if(!tracks.length){ wrap.textContent='— плейлист пуст —'; return; }
+      tracks.forEach((t,i)=>{
+        const div=document.createElement('div'); div.className='track';
+        const num = (i+1)+') ';
+        if(t.text){
+          if(t.url){
+            const a=document.createElement('a'); a.href=t.url; a.target='_blank'; a.textContent=num + t.text; div.appendChild(a);
+          } else { div.textContent = num + t.text; }
+        } else { div.textContent = num + '—'; }
+        wrap.appendChild(div);
+      });
+    }
+
+    async function buildCard(){
+      document.getElementById('corsWarn').style.display='none';
+      let corsError=false;
+
+      // Палитра
+      setPalette(document.getElementById('palette').value);
+
+      // Тексты
+      document.getElementById('v-name').textContent   = document.getElementById('name').value   || 'Имя персонажа';
+      document.getElementById('v-status').textContent = document.getElementById('status').value || 'Ник/статус';
+
+      // Аватар
+      const avaSrc = await resolveImg('avaUrl','avaFile', document.getElementById('avaUrl'));
+      if(avaSrc===null && document.getElementById('avaUrl').value.trim()){ corsError=true; }
+      setImg('v-ava', avaSrc);
+
+      // This-or-That
+      const autumn = readThisThat(TT_AUTUMN);
+      const magic  = readThisThat(TT_MAGIC);
+      renderBadges('v-tt-autumn', autumn);
+      renderBadges('v-tt-magic', magic);
+
+      // Треки
+      const tracks = collectTracks();
+      buildTracks(tracks);
+
+      // Мудборд
+      const moodWrap=document.getElementById('v-moods'); moodWrap.innerHTML='';
+      for(let i=1;i<=6;i++){
+        const urlEl=document.getElementById('m'+i+'u');
+        const src=await resolveImg('m'+i+'u','m'+i+'f', urlEl);
+        if(src===null && (urlEl.value||'').trim()){ corsError=true; }
+        const im=document.createElement('img'); if(src) im.src=src; moodWrap.appendChild(im);
+      }
+
+      // Чипсы
+      const chipsWrap=document.getElementById('v-chips'); chipsWrap.innerHTML='';
+      [
+        {k:'Цвет',v:document.getElementById('chipColor').value},
+        {k:'Вкус',v:document.getElementById('chipTaste').value},
+        {k:'Запах',v:document.getElementById('chipSmell').value},
+        {k:'Звук',v:document.getElementById('chipSound').value},
+        {k:'Предмет',v:document.getElementById('chipItem').value},
+      ].forEach(it=>{ if(!it.v) return; const span=document.createElement('span'); span.className='chip'; span.innerHTML='<b>'+it.k+':</b> '+it.v; chipsWrap.appendChild(span); });
+
+      // Кнопка PNG
+      const pngBtn=document.getElementById('pngBtn');
+      if(corsError){ pngBtn.disabled=true; document.getElementById('corsWarn').style.display='block'; }
+      else { pngBtn.disabled=false; }
+    }
+
+    async function downloadPNG(){
+      const node = document.getElementById('profileCard');
+      try{
+        const canvas = await html2canvas(node, {backgroundColor: null, useCORS: true, allowTaint: false, scale: 2});
+        const link = document.createElement('a');
+        link.download = (document.getElementById('name').value || 'anketa') + '.png';
+        link.href = canvas.toDataURL('image/png');
+        document.body.appendChild(link); link.click(); link.remove();
+      }catch(e){
+        alert('PNG не сохранился. Убедитесь, что все изображения загружены как файлы (а не по URL).');
+        console.error(e);
+      }
+    }
+
+    // Слушатели
+    document.getElementById('tracksCount').addEventListener('input', rebuildTrackFields);
+    document.getElementById('palette').addEventListener('change', ()=>setPalette(document.getElementById('palette').value));
+    document.getElementById('buildBtn').addEventListener('click', buildCard);
+    document.getElementById('pngBtn').addEventListener('click', downloadPNG);
+
+    // Первичный рендер
+    rebuildTrackFields();
+    buildCard();
+  </script>
+</body>
+</html>
