@@ -439,18 +439,84 @@
       else { pngBtn.disabled=false; }
     }
 
-    async function downloadPNG(){
-      const node = document.getElementById('profileCard');
-      try{
-        const canvas = await html2canvas(node, {backgroundColor: null, useCORS: true, allowTaint: false, scale: 2});
-        const link = document.createElement('a');
-        link.download = (document.getElementById('name').value || 'anketa') + '.png';
-        link.href = canvas.toDataURL('image/png');
-        document.body.appendChild(link); link.click(); link.remove();
-      }catch(e){
-        alert('PNG не сохранился. Убедитесь, что все изображения загружены как файлы (а не по URL).');
-        console.error(e);
+   async function downloadPNG(){
+    const node = document.getElementById('profileCard');
+
+    async function tryRender(scale){
+      console.log('[png] render try, scale=', scale);
+      return await html2canvas(node, {
+        backgroundColor: null,
+        useCORS: true,
+        allowTaint: false,
+        scale: scale,
+        removeContainer: true,
+        logging: false
+      });
+    }
+
+    function saveCanvas(canvas, filename){
+      if (canvas.toBlob) {
+        canvas.toBlob(function(blob){
+          if(!blob){ fallback(); return; }
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(()=>URL.revokeObjectURL(url), 5000);
+        }, 'image/png');
+      } else {
+        // старые браузеры
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
       }
+
+      function fallback(){
+        try{
+          const a = document.createElement('a');
+          a.href = canvas.toDataURL('image/png');
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        }catch(e){
+          alert('Не удалось сохранить PNG. Попробуй уменьшить количество/размер картинок или загружать их файлами.');
+          console.error('[png] fallback failed', e);
+        }
+      }
+    }
+
+    const fname = (document.getElementById('name').value || 'anketa') + '.png';
+
+    try{
+      // адаптивный масштаб
+      let canvas = null;
+      try { canvas = await tryRender(2); }
+      catch(e1){ console.warn('[png] scale 2 failed', e1); }
+      if(!canvas){
+        try { canvas = await tryRender(1.5); }
+        catch(e2){ console.warn('[png] scale 1.5 failed', e2); }
+      }
+      if(!canvas){
+        try { canvas = await tryRender(1); }
+        catch(e3){ console.warn('[png] scale 1 failed', e3); }
+      }
+      if(!canvas){
+        alert('PNG не собрался. Скорее всего, не хватает памяти или есть чужие картинки без CORS. Загрузите изображения файлами и попробуйте ещё раз.');
+        return;
+      }
+      saveCanvas(canvas, fname);
+    }catch(e){
+      alert('PNG не сохранился. Проверь: все картинки — файлами, и попробуй ещё раз.');
+      console.error('[png] fatal', e);
+    }
+
     }
 
     // Слушатели
