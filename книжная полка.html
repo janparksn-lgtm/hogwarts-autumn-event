@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Книжные полки — загрузка и экспорт</title>
+<style>
+  :root{
+    --bg-img: url('https://i.pinimg.com/736x/f5/18/52/f518527023840df8c66d9c66a6a0b95c.jpg');
+    --overlay: rgba(0,0,0,.35);
+    --shelf:#e6dfd4ea;
+    --card:#ffffff;
+    --ink:#2b2b2b;
+    --muted:#8a7f70;
+    --accent:#c49a6c;
+    --wrap-w: 700px;             /* ключевая ширина макета */
+    --gap:10px;
+    --cover-radius:10px;
+  }
+
+  /* фон */
+body{
+  margin:0; color:var(--ink);
+  font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  min-height:100dvh; background:#111; padding:16px;
+
+  /* центрирование страницы по горизонтали и вертикали */
+  display:grid;
+  place-content:center;
+
+  }
+  body::before{
+    content:""; position:fixed; inset:0;
+    background: var(--overlay), var(--bg-img) center/cover no-repeat fixed;
+    z-index:-1; filter:saturate(.9) contrast(.95);
+  }
+
+.page{
+  width:100%; max-width: var(--wrap-w);
+  display:grid; gap:14px;
+  margin-inline:auto; /* перестраховка для центрирования по горизонтали */
+  }
+
+  /* панель добавления */
+  .uploader{
+    background: #ffffffc8;
+    backdrop-filter: blur(2px);
+    border:1px solid #00000010;
+    border-radius:14px; padding:12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.1);
+  }
+  .uploader h2{ margin:0 0 10px; font-size:15px; }
+  .u-grid{
+    display:grid; gap:10px;
+    grid-template-columns: repeat(5, 1fr);
+  }
+  .u-item{
+    display:flex; flex-direction:column; gap:6px; align-items:stretch;
+  }
+  .u-btn{
+    display:grid; place-items:center;
+    aspect-ratio: 2 / 3; border:2px dashed var(--muted);
+    border-radius: var(--cover-radius);
+    background: var(--card);
+    cursor:pointer; position:relative; overflow:hidden;
+  }
+  .u-btn span{
+    text-align:center; color:var(--muted); font-size:11px; line-height:1.1;
+  }
+  .u-btn input{ display:none; }
+  .u-preview{
+    position:absolute; inset:0; background-size:cover; background-position:center;
+  }
+
+  /* полки */
+  .shelves-wrap{
+    display:grid; gap:14px;
+  }
+  .shelf{
+    background:
+      linear-gradient(to bottom, var(--accent) 0 6px, transparent 6px),
+      var(--shelf);
+    padding: 18px 12px 12px;
+    border-radius: 14px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.12);
+  }
+  .grid{
+    display:grid; grid-template-columns: repeat(5, 1fr); gap: var(--gap);
+  }
+  .book{ display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; }
+  .cover{
+    width:100%; aspect-ratio: 2 / 3; border:2px dashed var(--muted);
+    border-radius:var(--cover-radius); background:#fff;
+    background-size:cover; background-position:center; position:relative;
+    overflow:hidden;
+  }
+  .cover > span{
+    position:absolute; inset:0; display:grid; place-items:center;
+    color:var(--muted); font-size:11px; line-height:1.1; text-align:center;
+    white-space:pre-line;
+  }
+  .cover.filled{ border-style:solid; border-color:#c9c1b5; }
+  .label{
+    font-size:11.5px; line-height:1.25; color:#1f1b16; background:#fff8;
+    padding:5px 6px; border-radius:8px; border:1px solid #00000010; backdrop-filter: blur(2px);
+  }
+
+  .actions{
+    display:flex; gap:10px; justify-content:center; align-items:center;
+  }
+  .btn{
+    appearance:none; border:1px solid #00000020; background:#fff;
+    padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:600;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  }
+  .btn:active{ transform: translateY(1px); }
+
+  @media (max-width: 420px){
+    .u-grid, .grid{ grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (min-width: 421px) and (max-width: 500px){
+    .u-grid, .grid{ grid-template-columns: repeat(4, 1fr); }
+  }
+  @media (min-width: 501px){
+    .u-grid, .grid{ grid-template-columns: repeat(5, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ПАНЕЛЬ ЗАГРУЗКИ -->
+  <section class="uploader" aria-label="Добавить обложки">
+    <h2>Добавьте обложки (клик по ячейке)</h2>
+    <div class="u-grid" id="uGrid">
+      <!-- 10 ячеек загрузки -->
+      <!-- каждая связана с конкретным слотом на полках по data-slot="1..10" -->
+      <!-- текст 'Добавить обложку' в два ряда -->
+      <div class="u-item">
+        <label class="u-btn">
+          <input type="file" accept="image/*" data-slot="1">
+          <span>Добавить<br>обложку</span>
+          <div class="u-preview" hidden></div>
+        </label>
+      </div>
+      <div class="u-item">
+        <label class="u-btn">
+          <input type="file" accept="image/*" data-slot="2">
+          <span>Добавить<br>обложку</span>
+          <div class="u-preview" hidden></div>
+        </label>
+      </div>
+      <div class="u-item">
+        <label class="u-btn">
+          <input type="file" accept="image/*" data-slot="3">
+          <span>Добавить<br>обложку</span>
+          <div class="u-preview" hidden></div>
+        </label>
+      </div>
+      <div class="u-item">
+        <label class="u-btn">
+          <input type="file" accept="image/*" data-slot="4">
+          <span>Добавить<br>обложку</span>
+          <div class="u-preview" hidden></div>
+        </label>
+      </div>
+      <div class="u-item">
+        <label class="u-btn">
+          <input type="file" accept="image/*" data-slot="5">
+          <span>Добавить<br>обложку</span>
+          <div class="u-preview" hidden></div>
+        </label>
+      </div>
+
+      <div class="u-item">
+        <label class="u-btn">
+          <input type="file" accept="image/*" data-slot="6">
+          <span>Добавить<br>обложку</span>
+          <div class="u-preview" hidden></div>
+        </label>
+      </div>
+      <div class="u-item">
+        <label class="u-btn">
+          <input type="file" accept="image/*" data-slot="7">
+          <span>Добавить<br>обложку</span>
+          <div class="u-preview" hidden></div>
+        </label>
+      </div>
+      <div class="u-item">
+        <label class="u-btn">
+          <input type="file" accept="image/*" data-slot="8">
+          <span>Добавить<br>обложку</span>
+          <div class="u-preview" hidden></div>
+        </label>
+      </div>
+      <div class="u-item">
+        <label class="u-btn">
+          <input type="file" accept="image/*" data-slot="9">
+          <span>Добавить<br>обложку</span>
+          <div class="u-preview" hidden></div>
+        </label>
+      </div>
+      <div class="u-item">
+        <label class="u-btn">
+          <input type="file" accept="image/*" data-slot="10">
+          <span>Добавить<br>обложку</span>
+          <div class="u-preview" hidden></div>
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <!-- ПОЛКИ (ИМЕННО ЭТО БУДЕМ ЭКСПОРТИРОВАТЬ В PNG) -->
+  <section class="shelves-wrap" id="exportArea" aria-label="Книжные полки">
+    <!-- Полка 1 -->
+    <div class="shelf">
+      <div class="grid">
+        <div class="book">
+          <div class="cover" data-slot="1"><span>Добавить<br>обложку</span></div>
+          <div class="label">Последняя книга, которую прочитал(а)</div>
+        </div>
+        <div class="book">
+          <div class="cover" data-slot="2"><span>Добавить<br>обложку</span></div>
+          <div class="label">Читаю сейчас</div>
+        </div>
+        <div class="book">
+          <div class="cover" data-slot="3"><span>Добавить<br>обложку</span></div>
+          <div class="label">Комфортная книга</div>
+        </div>
+        <div class="book">
+          <div class="cover" data-slot="4"><span>Добавить<br>обложку</span></div>
+          <div class="label">Последняя купленная</div>
+        </div>
+        <div class="book">
+          <div class="cover" data-slot="5"><span>Добавить<br>обложку</span></div>
+          <div class="label">Книга, которую я перечитываю снова и снова</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Полка 2 -->
+    <div class="shelf">
+      <div class="grid">
+        <div class="book">
+          <div class="cover" data-slot="6"><span>Добавить<br>обложку</span></div>
+          <div class="label">Книга, которую я хотел(а) бы забыть, чтобы прочитать заново</div>
+        </div>
+        <div class="book">
+          <div class="cover" data-slot="7"><span>Добавить<br>обложку</span></div>
+          <div class="label">Пугающая книга</div>
+        </div>
+        <div class="book">
+          <div class="cover" data-slot="8"><span>Добавить<br>обложку</span></div>
+          <div class="label">Книга, которая стала неожиданным открытием</div>
+        </div>
+        <div class="book">
+          <div class="cover" data-slot="9"><span>Добавить<br>обложку</span></div>
+          <div class="label">Книга с героем, на которого я похож(а)</div>
+        </div>
+        <div class="book">
+          <div class="cover" data-slot="10"><span>Добавить<br>обложку</span></div>
+          <div class="label">Книга, в которой хочется жить</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="actions">
+    <button class="btn" id="downloadBtn">Выгрузить PNG</button>
+  </div>
+</div>
+
+<!-- html2canvas для экспорта PNG -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script>
+(function(){
+  // ... твой код выше ...
+
+  const exportArea = document.getElementById('exportArea');
+  document.getElementById('downloadBtn').addEventListener('click', async () => {
+    try {
+      // Чёткая картинка без «таинта»
+      const scale = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+      const canvas = await html2canvas(exportArea, {
+        backgroundColor: null,   // прозрачный фон вне exportArea
+        scale,
+        useCORS: false,          // нам не нужны внешние картинки внутри exportArea
+        allowTaint: false        // важно: иначе сохранение может быть заблокировано
+        // foreignObjectRendering: true // можно включить при экзотичных стилях
+      });
+
+      // Сохраняем через Blob (надёжнее, чем dataURL)
+      canvas.toBlob((blob) => {
+        if (!blob) return; // на всякий случай
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'bookshelves.png';
+        document.body.appendChild(a);   // гарантируем клик
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }, 'image/png');
+    } catch (e) {
+      console.error(e);
+      alert('Не удалось сформировать изображение. Открой консоль (F12) — там будет детальнее.');
+    }
+  });
+})();
+</script>
+</body>
+</html>
